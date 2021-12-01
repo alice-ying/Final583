@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC   -Wl,-rpath-link,  -Wl,-O3 -Wl,--gc-sections -shared  -o LLVMPJT.so CMakeFiles/LLVMPJT.dir/gather_data_pass.cpp.o  -Wl,-rpath,"\$ORIGIN/../lib" 

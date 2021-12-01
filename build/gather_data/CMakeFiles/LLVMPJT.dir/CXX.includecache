@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/acying/Final583/gather_data/gather_data_pass.cpp
+llvm/Pass.h
+/home/acying/Final583/gather_data/llvm/Pass.h
+llvm/IR/Function.h
+/home/acying/Final583/gather_data/llvm/IR/Function.h
+llvm/Support/raw_ostream.h
+/home/acying/Final583/gather_data/llvm/Support/raw_ostream.h
+
