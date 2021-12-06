@@ -8,9 +8,14 @@ basicmath_small: ${FILE1} Makefile
 	clang -emit-llvm -include snipmath.h -c cubic.c -o cubic.bc
 	clang -emit-llvm -include snipmath.h -c isqrt.c -o isqrt.bc
 	clang -emit-llvm -include snipmath.h -c rad2deg.c -o rad2deg.bc
-	llvm-link basicmath_small.bc cubic.bc isqrt.bc rad2deg.bc -o agg.bc
-basicmath_large: ${FILE2} Makefile
+	llvm-link basicmath_small.bc cubic.bc isqrt.bc rad2deg.bc -o basicmath_small_agg.bc
 
+basicmath_large: ${FILE2} Makefile
+	clang -emit-llvm -include snipmath.h -c basicmath_large.c -o basicmath_large.bc
+	clang -emit-llvm -include snipmath.h -c cubic.c -o cubic.bc
+	clang -emit-llvm -include snipmath.h -c isqrt.c -o isqrt.bc
+	clang -emit-llvm -include snipmath.h -c rad2deg.c -o rad2deg.bc
+	llvm-link basicmath_large.bc cubic.bc isqrt.bc rad2deg.bc -o basicmath_large_agg.bc
 
 clean:
 	rm -rf basicmath_small basicmath_large output*

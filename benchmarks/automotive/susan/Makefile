@@ -1,5 +1,5 @@
 susan: susan.c Makefile
-	gcc -static -O4 -o susan susan.c -lm 
+	clang -emit-llvm -c susan.c -o susan.bc
 
 clean:
 	rm -rf susan output*
