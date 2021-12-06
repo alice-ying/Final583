@@ -6,7 +6,7 @@ opt -loop-simplify ${1}.bc -o ${1}.ls.bc
 # Instrument profiler
 opt -pgo-instr-gen -instrprof ${1}.ls.bc -o ${1}.ls.prof.bc
 # Generate binary executable with profiler embedded
-clang -fprofile-instr-generate ${1}.ls.prof.bc -o ${1}_prof
+clang -fprofile-instr-generate -lm ${1}.ls.prof.bc -o ${1}_prof
 
 # Generate profiled data
 ./${1}_prof > correct_output
