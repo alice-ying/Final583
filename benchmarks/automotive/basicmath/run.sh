@@ -15,3 +15,4 @@ llvm-profdata merge -o ${1}.profdata default.profraw
 # Apply Heuristics
 opt -o ${1}.heuristics.bc -pgo-instr-use -pgo-test-profile-file=${1}.profdata -load ${PATH2LIB} ${PASS} < ${1}.ls.bc > /dev/null
 
+
