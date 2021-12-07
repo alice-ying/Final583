@@ -1,5 +1,5 @@
 PATH2LIB=~/Final583/build/gather_data/LLVMPJT.so      # Specify your build directory in the project
-PASS=-heuristics
+PASS=-CalcHeuristics
 
 # Canonicalize natural loops
 opt -loop-simplify ${1}.bc -o ${1}.ls.bc
