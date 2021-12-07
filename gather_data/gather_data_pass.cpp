@@ -68,11 +68,11 @@ struct CalcHeuristics : public FunctionPass {
 
     FILE *heuristic_data;
     FILE *true_prob_data;
-    heuristic_data = fopen("heuristics.csv", "w+");
-    true_prob_data = fopen("true_probability.csv", "w+");
+    heuristic_data = fopen("heuristics.csv", "a+");
+    true_prob_data = fopen("true_probability.csv", "a+");
 
     std::set<int> branch_cmds = {llvm::Instruction::Br, llvm::Instruction::Switch, llvm::Instruction::IndirectBr};
-    
+    int num_branches = 0;
     for(Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
       BasicBlock *curr_bb = dyn_cast<BasicBlock>(bb);
       Instruction *instr = curr_bb->getTerminator();
