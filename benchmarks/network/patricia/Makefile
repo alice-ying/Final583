@@ -1,5 +1,7 @@
 patricia: patricia.c patricia_test.c
-	gcc -static patricia.c patricia_test.c -O3 -o patricia
+	clang -emit-llvm -c patricia.c -o patricia.bc
+	clang -emit-llvm -c patricia_test.c -o patricia_test.bc
+	llvm-link patricia.bc patricia_test.bc -o patricia_agg.bc
 
 clean:
 	rm -rf patricia output*
