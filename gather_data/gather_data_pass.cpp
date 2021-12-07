@@ -40,6 +40,7 @@ Ball and Larus Heuristics:
 #include <vector>
 #include <set>
 #include <iostream>
+#include <fstream>
 #include <unordered_map>
 
 using namespace llvm;
@@ -47,26 +48,64 @@ using namespace llvm;
 namespace Heuristics{
 struct HeuristicsPass : public FunctionPass {
   static char ID;
-  HeuristicsPass() : FunctionPass(ID) {}
+  HeuristicsPass() : FunctionPass(ID) {}  
 
   bool runOnFunction(Function &F) {
-    // Open CSV
-
+    errs() << "Pass is running finally!!!\n";
+    std::ofstream heuristics_ofs;
+    std::ofstream true_probability_ofs;
+    heuristics_ofs.open("heuristics.csv");
+    true_probability_ofs.open("true_probability.csv");
     std::set<int> branch_cmds = {llvm::Instruction::Br, llvm::Instruction::Switch, llvm::Instruction::IndirectBr};
 
     for(Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
-      for (BasicBlock::iterator i = bb->begin(), e = bb->end(); i != e; ++i) {
-            if(branch_cmds.find(i->getOpcode()) != branch_cmds.end()){
-                // Evaluate Heuristics and write to CSV
-            }
-        }
+      BasicBlock *curr_bb = bb;
+      Instruction *instr = curr_bb->getTerminator();
+      BranchInst *branch_instr = dyn_cast<BranchInst>(instr);
+      if(branch_cmds.find(i->getOpcode()) != branch_cmds.end()){
+        errs() << "Found a branch instruction!\n";
+        BasicBlock *taken = branch_instr->getSuccessor(0);
+        BasicBlock *not_taken = branch_instr->getSuccessor(1);
+
+
+
+      }
+
     }
+    return false;
+  }
 
+  void h_loop(ofstream& heuristics_ofs, ofstream& true_probability_ofs){
+    
+  }
 
-
+  void h_pointer(ofstream& heuristics_ofs, ofstream& true_probability_ofs){
 
   }
 
+  void h_opcode(ofstream& heuristics_ofs, ofstream& true_probability_ofs){
+
+  }
+
+  void h_guard(ofstream& heuristics_ofs, ofstream& true_probability_ofs){
+
+  }
+
+  void h_loopheader(ofstream& heuristics_ofs, ofstream& true_probability_ofs){
+
+  }
+
+  void h_call(ofstream& heuristics_ofs, ofstream& true_probability_ofs){
+
+  }
+
+  void h_store(ofstream& heuristics_ofs, ofstream& true_probability_ofs){
+
+  }
+
+  void h_return(ofstream& heuristics_ofs, ofstream& true_probability_ofs){
+
+  }
 
 
   void getAnalysisUsage(AnalysisUsage &AU) const {
