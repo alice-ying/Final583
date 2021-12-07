@@ -62,13 +62,14 @@ struct CalcHeuristics : public FunctionPass {
   bool runOnFunction(Function &F) override {
     errs() << "Pass is running finally!!!\n";
 
-    // Initialize CSVs
-    std::ofstream heuristics_ofs;
-    std::ofstream true_probability_ofs;
-    heuristics_ofs.open("heuristics.csv");
-    true_probability_ofs.open("true_probability.csv");
-    heuristics_ofs << "Loop, " << "Pointer, " << "Opcode, " << "Guard, " << "Loop, " << "Call, " << "Store, " << "Return\n";
-    true_probability_ofs << "Taken, " << "Not Taken\n";
+    BranchProbabilityInfo &bpi = getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI(); 
+    const unsigned int taken_idx = 0;
+    const unsigned int not_taken_idx = 1;
+
+    FILE *heuristic_data;
+    FILE *true_prob_data;
+    heuristic_data = fopen("heuristics.csv", "w+");
+    true_prob_data = fopen("true_probability.csv", "w+");
 
     std::set<int> branch_cmds = {llvm::Instruction::Br, llvm::Instruction::Switch, llvm::Instruction::IndirectBr};
     
@@ -85,40 +86,26 @@ struct CalcHeuristics : public FunctionPass {
         int guard = h_guard(curr_bb);
 
         // Successor's BB heuristics
-        BasicBlock *taken = branch_instr->getSuccessor(0);
-        BasicBlock *not_taken = branch_instr->getSuccessor(1);
+        BasicBlock *taken = branch_instr->getSuccessor(taken_idx);
+        BasicBlock *not_taken = branch_instr->getSuccessor(not_taken_idx);
 
-        int loopheader = h_loopheader(taken , 0);
-        if(loopheader == -1){
-          loopheader = h_loopheader(not_taken , 1);
-        }
-
-        int call = h_call(taken, 0);
-        if(call == -1){
-          call = h_call(not_taken, 1);
-        }
-
-        int store = h_store(taken, 0);
-        if(store == -1){
-          store = h_store(not_taken, 1);
-        }
-
-        int ret = h_return(taken, 0);
-        if(ret == -1){
-          ret = h_return(not_taken, 1);
-        }
+        int loopheader = h_loopheader(taken, not_taken);
+        int call = h_call(taken, not_taken);
+        int store = h_store(taken, not_taken);
+        int ret = h_return(taken, not_taken);
 
         // Write to csv
         // True edge probabilities
+        BranchProbability taken_br_prob = bpi.getEdgeProbability(curr_bb, taken_idx);
+        double taken_prob = (double) taken_br_prob.getNumerator() / taken_br_prob.getDenominator();
+        double not_taken_prob = 1 - taken_prob;
+        fprintf(true_prob_data, "%f, %f\n", taken_prob, not_taken_prob);
 
         // Heuristics
-
+        fprintf(heuristic_data, "%d, %d, %d, %d, %d, %d, %d, %d\n", loop, pointer, opcode, guard, loopheader, call, store, ret);
       }
 
     }
-
-    heuristics_ofs.close();
-    true_probability_ofs.close();
 
     return false;
   }
@@ -139,19 +126,19 @@ struct CalcHeuristics : public FunctionPass {
     return -1;
   }
 
-  int h_loopheader(BasicBlock *successor_bb, int id){
+  int h_loopheader(BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
     return -1;
   }
 
-  int h_call(BasicBlock *successor_bb, int id){
+  int h_call(BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
     return -1;
   }
 
-  int h_store(BasicBlock *successor_bb, int id){
+  int h_store(BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
     return -1;
   }
 
-  int h_return(BasicBlock *successor_bb, int id){
+  int h_return(BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
     return -1;
   }
 };
