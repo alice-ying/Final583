@@ -12,6 +12,9 @@
 // heuristics.csv
 //   - Rows: One for each branch
 //   - Columns: branch_id, loop, pointer, opcode, guard, loop_header, call, store, return
+//    -1: N/A
+//    0: taken
+//    1: not taken
 
 // Ball and Larus Heuristics:
 //   - Loop: If the branch is a loop (backedge to loop header), then predict taken.
@@ -58,59 +61,98 @@ struct CalcHeuristics : public FunctionPass {
 
   bool runOnFunction(Function &F) override {
     errs() << "Pass is running finally!!!\n";
+
+    // Initialize CSVs
     std::ofstream heuristics_ofs;
     std::ofstream true_probability_ofs;
     heuristics_ofs.open("heuristics.csv");
     true_probability_ofs.open("true_probability.csv");
-    std::set<int> branch_cmds = {llvm::Instruction::Br, llvm::Instruction::Switch, llvm::Instruction::IndirectBr};
+    heuristics_ofs << "Loop, " << "Pointer, " << "Opcode, " << "Guard, " << "Loop, " << "Call, " << "Store, " << "Return\n";
+    true_probability_ofs << "Taken, " << "Not Taken\n";
 
+    std::set<int> branch_cmds = {llvm::Instruction::Br, llvm::Instruction::Switch, llvm::Instruction::IndirectBr};
+    
     for(Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
       BasicBlock *curr_bb = dyn_cast<BasicBlock>(bb);
       Instruction *instr = curr_bb->getTerminator();
       BranchInst *branch_instr = dyn_cast<BranchInst>(instr);
-      if(branch_cmds.find(instr->getOpcode()) != branch_cmds.end()){
-        errs() << "Found a branch instruction!\n";
+      if(branch_cmds.find(instr->getOpcode()) != branch_cmds.end() && branch_instr->getNumSuccessors() == 2){
+        
+        // Branch's BB heuristics 
+        int loop = h_loop(curr_bb);
+        int pointer = h_pointer(curr_bb);
+        int opcode = h_opcode(curr_bb);
+        int guard = h_guard(curr_bb);
+
+        // Successor's BB heuristics
         BasicBlock *taken = branch_instr->getSuccessor(0);
         BasicBlock *not_taken = branch_instr->getSuccessor(1);
 
+        int loopheader = h_loopheader(taken , 0);
+        if(loopheader == -1){
+          loopheader = h_loopheader(not_taken , 1);
+        }
 
+        int call = h_call(taken, 0);
+        if(call == -1){
+          call = h_call(not_taken, 1);
+        }
+
+        int store = h_store(taken, 0);
+        if(store == -1){
+          store = h_store(not_taken, 1);
+        }
+
+        int ret = h_return(taken, 0);
+        if(ret == -1){
+          ret = h_return(not_taken, 1);
+        }
+
+        // Write to csv
+        // True edge probabilities
+
+        // Heuristics
 
       }
 
     }
+
+    heuristics_ofs.close();
+    true_probability_ofs.close();
+
     return false;
   }
 
-  void h_loop(std::ofstream& heuristics_ofs, std::ofstream& true_probability_ofs){
-    
+  int h_loop(BasicBlock *branch_bb){
+    return -1;
   }
 
-  void h_pointer(std::ofstream& heuristics_ofs, std::ofstream& true_probability_ofs){
-
+  int h_pointer(BasicBlock *branch_bb){
+    return -1;
   }
 
-  void h_opcode(std::ofstream& heuristics_ofs, std::ofstream& true_probability_ofs){
-
+  int h_opcode(BasicBlock *branch_bb){
+    return -1;
   }
 
-  void h_guard(std::ofstream& heuristics_ofs, std::ofstream& true_probability_ofs){
-
+  int h_guard(BasicBlock *branch_bb){
+    return -1;
   }
 
-  void h_loopheader(std::ofstream& heuristics_ofs, std::ofstream& true_probability_ofs){
-
+  int h_loopheader(BasicBlock *successor_bb, int id){
+    return -1;
   }
 
-  void h_call(std::ofstream& heuristics_ofs, std::ofstream& true_probability_ofs){
-
+  int h_call(BasicBlock *successor_bb, int id){
+    return -1;
   }
 
-  void h_store(std::ofstream& heuristics_ofs, std::ofstream& true_probability_ofs){
-
+  int h_store(BasicBlock *successor_bb, int id){
+    return -1;
   }
 
-  void h_return(std::ofstream& heuristics_ofs, std::ofstream& true_probability_ofs){
-
+  int h_return(BasicBlock *successor_bb, int id){
+    return -1;
   }
 };
 };
