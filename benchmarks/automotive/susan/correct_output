@@ -1,0 +1,16 @@
+Usage: susan <in.pgm> <out.pgm> [options]
+
+-s : Smoothing mode (default)
+-e : Edges mode
+-c : Corners mode
+
+See source code for more information about setting the thresholds
+-t <thresh> : Brightness threshold, all modes (default=20)
+-d <thresh> : Distance threshold, smoothing mode, (default=4) (use next option instead for flat 3x3 mask)
+-3 : Use flat 3x3 mask, edges or smoothing mode
+-n : No post-processing on the binary edge map (runs much faster); edges mode
+-q : Use faster (and usually stabler) corner mode; edge-like corner suppression not carried out; corners mode
+-b : Mark corners/edges with single black points instead of black with white border; corners or edges mode
+-p : Output initial enhancement image only; corners or edges mode (default is edges mode)
+
+SUSAN Version 2l (C) 1995-1997 Stephen Smith, DRA UK. steve@fmrib.ox.ac.uk
