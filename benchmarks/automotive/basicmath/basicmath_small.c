@@ -17,6 +17,13 @@ int main(void)
   struct int_sqrt q;
   long n = 0;
 
+  int blah = 1;
+  int *ptr = &blah;
+  int *ptr1 = &blah;
+  if(ptr == NULL){
+    printf("equal!");
+  }
+
   /* solve soem cubic functions */
   printf("********* CUBIC FUNCTIONS ***********\n");
   /* should get 3 solutions: 2, 6 & 2.5   */
