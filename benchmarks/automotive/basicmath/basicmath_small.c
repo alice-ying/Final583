@@ -24,6 +24,34 @@ int main(void)
     printf("equal!");
   }
 
+  if(blah < 0){
+    printf("wee");
+  }
+
+  if(blah <= 0){
+    printf("wee");
+  }
+
+  if(0 >= blah){
+    printf("wee");
+  }
+
+  if(0 > blah){
+    printf("wee");
+  }
+
+  if(blah == 1){
+    printf("wee");
+  }
+
+  if(blah == 0){
+    printf("wee");
+  }
+
+  if(1 == 1){
+    printf("wee");
+  }
+
   /* solve soem cubic functions */
   printf("********* CUBIC FUNCTIONS ***********\n");
   /* should get 3 solutions: 2, 6 & 2.5   */

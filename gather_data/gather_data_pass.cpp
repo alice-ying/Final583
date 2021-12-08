@@ -135,14 +135,32 @@ struct CalcHeuristics : public FunctionPass {
     Instruction *instr = branch_bb->getTerminator();
     BranchInst *branch_instr = dyn_cast<BranchInst>(instr);
 
-    if(!branch_instr->isConditional()){
-      return -1;
-    }
+    if(branch_instr->isConditional()){
+      Value *cond = branch_instr->getCondition();
+      Instruction *i = dyn_cast<Instruction>(&*cond);
+      
+      Value *opr0 = i->getOperand(0);
+      Value *opr1 = i->getOperand(1);
 
-    Value *cond = branch_instr->getCondition();
-    Instruction* iCmpInst = dyn_cast<Instruction>(&*cond);
-    if(iCmpInst->getOpcode() == llvm::Instruction::ICmp){ // and 0 or constant
+      if(opr0->getType()->isIntegerTy() && opr1->getType()->isIntegerTy()){
+        CmpInst *cmpInst = dyn_cast<CmpInst>(&*i);
+        CmpInst::Predicate pred = cmpInst->getPredicate();
 
+        if(isa<Constant>(opr0) && !isa<Constant>(opr1)){
+          int const_val = dyn_cast<llvm::ConstantInt>(opr0)->getSExtValue();
+          if((const_val == 0 && (pred == CmpInst::Predicate::ICMP_SGT || pred == CmpInst::Predicate::ICMP_SGE))
+            || (const_val != 0 && pred == CmpInst::Predicate::ICMP_EQ)){
+            return 1;
+          }
+        }
+        else if(!isa<Constant>(opr0) && isa<Constant>(opr1)){
+          int const_val = dyn_cast<llvm::ConstantInt>(opr1)->getSExtValue();
+          if((const_val == 0 && (pred == CmpInst::Predicate::ICMP_SLT || pred == CmpInst::Predicate::ICMP_SLE))
+            || (const_val != 0 && pred == CmpInst::Predicate::ICMP_EQ)){
+            return 1;
+          }
+        }
+      }
     }
 
     return -1;
