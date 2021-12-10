@@ -42,6 +42,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include <vector>
 #include <set>
 #include <iostream>
@@ -59,6 +60,7 @@ struct CalcHeuristics : public FunctionPass {
     AU.addRequired<BlockFrequencyInfoWrapperPass>(); // Analysis pass to load block execution count
     AU.addRequired<BranchProbabilityInfoWrapperPass>(); // Analysis pass to load branch probability
     AU.addRequired<PostDominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
     AU.setPreservesAll();
   }
 
@@ -93,10 +95,10 @@ struct CalcHeuristics : public FunctionPass {
 
         // Heuristics
         fprintf(heuristic_data, "%d, %d, %d, %d, %d, %d, %d, %d\n",
-          h_loop(curr_bb),
+          h_loop(curr_bb, taken),
           h_pointer(curr_bb),
           h_opcode(curr_bb),
-          h_guard(curr_bb),
+          h_guard(curr_bb, taken, not_taken),
           h_loopheader(curr_bb, taken, not_taken),
           h_call(curr_bb, taken, not_taken),
           h_store(curr_bb, taken, not_taken),
@@ -109,7 +111,26 @@ struct CalcHeuristics : public FunctionPass {
   }
 
   // Loop: If the branch is a loop (backedge to loop header), then predict taken.
-  int h_loop(BasicBlock *branch_bb){
+  int h_loop(BasicBlock *branch_bb, BasicBlock *taken_successor_bb){
+    // LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    // Loop* L = LI->getLoopFor(branch_bb);
+    // if(L != nullptr){
+    //   BasicBlock* header = L->getHeader();
+    //   BasicBlock* preheader = L->getLoopPreheader();
+    //   // errs() << "HEADER";
+    //   // header->print(errs());
+    //   // errs() << "\nPREHEADER";
+    //   // preheader->print(errs());
+    //   // errs() << "\nTAKEN BB";
+    //   // taken_successor_bb->print(errs());
+    //   // errs() << "\n\n";
+    //   if(header == taken_successor_bb || preheader == taken_successor_bb){
+    //     errs() << 0 << "\n";
+    //     return 0;
+    //   }
+    // }
+    
+    // errs() << -1 << "\n";
     return -1;
   }
 
@@ -170,12 +191,47 @@ struct CalcHeuristics : public FunctionPass {
   }
 
   // Guard: If operand is a register that is used before define in the successor, and the successor does not post-dominate the current block, predict branch taken to the successor
-  int h_guard(BasicBlock *branch_bb){
+  int h_guard(BasicBlock *branch_bb, BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
+    auto PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+    Instruction *instr = branch_bb->getTerminator();
+    BranchInst *branch_instr = dyn_cast<BranchInst>(instr);
+
+    if(branch_instr->isConditional()){
+      Value *cond = branch_instr->getCondition();
+      Instruction *i = dyn_cast<Instruction>(&*cond);
+      Value *opr0 = i->getOperand(0);
+      Value *opr1 = i->getOperand(1);
+
+      if(!PDT->dominates(taken_successor_bb, branch_bb)){
+        
+        for(Instruction &i : *taken_successor_bb) {
+          return 0;
+        }
+      }
+
+      if(!PDT->dominates(not_taken_successor_bb, branch_bb)){
+        for(Instruction &i : *not_taken_successor_bb) {
+          return 1;
+        }
+      }
+    }
+
     return -1;
   }
 
   // Loop Header: If successor is a loop header or loop pre-header and does not post dominate, then the branch will be taken
   int h_loopheader(BasicBlock *branch_bb, BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
+    auto PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    if(!PDT->dominates(taken_successor_bb, branch_bb) && (LI->isLoopHeader(taken_successor_bb) /* or loop pre-header */)){
+      errs() << 0 << "\n";
+      return 0;
+    }
+
+    if(!PDT->dominates(not_taken_successor_bb, branch_bb) && (LI->isLoopHeader(not_taken_successor_bb) /* or loop pre-header */)){
+      errs() << 1 << "\n";
+      return 1;
+    }
     return -1;
   }
 
