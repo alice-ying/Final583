@@ -41,6 +41,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/PostDominators.h"
 #include <vector>
 #include <set>
 #include <iostream>
@@ -57,6 +58,8 @@ struct CalcHeuristics : public FunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<BlockFrequencyInfoWrapperPass>(); // Analysis pass to load block execution count
     AU.addRequired<BranchProbabilityInfoWrapperPass>(); // Analysis pass to load branch probability
+    AU.addRequired<PostDominatorTreeWrapperPass>();
+    AU.setPreservesAll();
   }
 
   bool runOnFunction(Function &F) override {
@@ -94,14 +97,18 @@ struct CalcHeuristics : public FunctionPass {
           h_pointer(curr_bb),
           h_opcode(curr_bb),
           h_guard(curr_bb),
-          h_loopheader(taken, not_taken),
-          h_call(taken, not_taken),
-          h_store(taken, not_taken),
+          h_loopheader(curr_bb, taken, not_taken),
+          h_call(curr_bb, taken, not_taken),
+          h_store(curr_bb, taken, not_taken),
           h_return(taken, not_taken)
         );
       }
     }
 
+    return false;
+  }
+
+  bool is_post_dom(){
     return false;
   }
 
@@ -172,18 +179,37 @@ struct CalcHeuristics : public FunctionPass {
   }
 
   // Loop Header: If successor is a loop header or loop pre-header and does not post dominate, then the branch will be taken
-  int h_loopheader(BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
+  int h_loopheader(BasicBlock *branch_bb, BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
     return -1;
   }
 
   // Call: If successor contains a function call and does not post dominate, predict branch not taken
-  int h_call(BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
+  int h_call(BasicBlock *branch_bb, BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
     // CallInst
     return -1;
   }
 
   // Store: If succeessor contains a store and does not post dominate, predict branch not taken
-  int h_store(BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
+  int h_store(BasicBlock *branch_bb, BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
+    auto PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+    if(!PDT->dominates(taken_successor_bb, branch_bb)){
+      for(Instruction &i : *taken_successor_bb) {
+        int opc = i.getOpcode();
+        if(opc == llvm::Instruction::Store){
+          return 1;
+        }
+      }
+    }
+
+    if(!PDT->dominates(not_taken_successor_bb, branch_bb)){
+      for(Instruction &i : *not_taken_successor_bb) {
+        int opc = i.getOpcode();
+        if(opc == llvm::Instruction::Store){
+          return 0;
+        }
+      }
+    }
+
     return -1;
   }
 
