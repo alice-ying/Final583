@@ -108,10 +108,6 @@ struct CalcHeuristics : public FunctionPass {
     return false;
   }
 
-  bool is_post_dom(){
-    return false;
-  }
-
   // Loop: If the branch is a loop (backedge to loop header), then predict taken.
   int h_loop(BasicBlock *branch_bb){
     return -1;
@@ -185,7 +181,24 @@ struct CalcHeuristics : public FunctionPass {
 
   // Call: If successor contains a function call and does not post dominate, predict branch not taken
   int h_call(BasicBlock *branch_bb, BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
-    // CallInst
+    auto PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+    if(!PDT->dominates(taken_successor_bb, branch_bb)){
+      for(Instruction &i : *taken_successor_bb) {
+        if(isa<CallInst>(&i)){
+          return 1;
+        }
+      }
+    }
+
+    if(!PDT->dominates(not_taken_successor_bb, branch_bb)){
+      for(Instruction &i : *not_taken_successor_bb) {
+        int opc = i.getOpcode();
+        if(isa<CallInst>(&i)){
+          return 0;
+        }
+      }
+    }
+
     return -1;
   }
 
