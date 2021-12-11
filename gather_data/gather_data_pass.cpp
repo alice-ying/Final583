@@ -76,15 +76,19 @@ struct CalcHeuristics : public FunctionPass {
     true_prob_data = fopen("true_probability.csv", "a+");
 
     // Run through all branches
-    std::set<int> branch_cmds = {llvm::Instruction::Br, llvm::Instruction::Switch, llvm::Instruction::IndirectBr};
     int num_branches = 0;
     for(Function::iterator bb = F.begin(), e = F.end(); bb != e; ++bb) {
       BasicBlock *curr_bb = dyn_cast<BasicBlock>(bb);
       Instruction *instr = curr_bb->getTerminator();
-      BranchInst *branch_instr = dyn_cast<BranchInst>(instr);
-      if(branch_cmds.find(instr->getOpcode()) != branch_cmds.end() && branch_instr->getNumSuccessors() == 2){
+
+      if(isa<BranchInst>(instr)){
+        BranchInst *branch_instr = dyn_cast<BranchInst>(instr);
         BasicBlock *taken = branch_instr->getSuccessor(taken_idx);
-        BasicBlock *not_taken = branch_instr->getSuccessor(not_taken_idx);
+        BasicBlock *not_taken = nullptr;
+
+        if(branch_instr->getNumSuccessors() == 2){
+          not_taken = branch_instr->getSuccessor(not_taken_idx);
+        }
 
         // Write to csv
         // True edge probabilities
@@ -112,25 +116,15 @@ struct CalcHeuristics : public FunctionPass {
 
   // Loop: If the branch is a loop (backedge to loop header), then predict taken.
   int h_loop(BasicBlock *branch_bb, BasicBlock *taken_successor_bb){
-    // LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    // Loop* L = LI->getLoopFor(branch_bb);
-    // if(L != nullptr){
-    //   BasicBlock* header = L->getHeader();
-    //   BasicBlock* preheader = L->getLoopPreheader();
-    //   // errs() << "HEADER";
-    //   // header->print(errs());
-    //   // errs() << "\nPREHEADER";
-    //   // preheader->print(errs());
-    //   // errs() << "\nTAKEN BB";
-    //   // taken_successor_bb->print(errs());
-    //   // errs() << "\n\n";
-    //   if(header == taken_successor_bb || preheader == taken_successor_bb){
-    //     errs() << 0 << "\n";
-    //     return 0;
-    //   }
-    // }
-    
-    // errs() << -1 << "\n";
+    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    Loop* L = LI->getLoopFor(branch_bb);
+    if(L != nullptr){
+      BasicBlock* header = L->getHeader();
+      BasicBlock* preheader = L->getLoopPreheader();
+      if(header == taken_successor_bb || preheader == taken_successor_bb){
+        return 0;
+      }
+    }
     return -1;
   }
 
@@ -150,7 +144,6 @@ struct CalcHeuristics : public FunctionPass {
         return 1;
       }
     }
-    
     return -1;
   }
  
@@ -186,7 +179,6 @@ struct CalcHeuristics : public FunctionPass {
         }
       }
     }
-
     return -1;
   }
 
@@ -203,19 +195,17 @@ struct CalcHeuristics : public FunctionPass {
       Value *opr1 = i->getOperand(1);
 
       if(!PDT->dominates(taken_successor_bb, branch_bb)){
-        
         for(Instruction &i : *taken_successor_bb) {
           return 0;
         }
       }
 
-      if(!PDT->dominates(not_taken_successor_bb, branch_bb)){
+      if(not_taken_successor_bb != nullptr && !PDT->dominates(not_taken_successor_bb, branch_bb)){
         for(Instruction &i : *not_taken_successor_bb) {
           return 1;
         }
       }
     }
-
     return -1;
   }
 
@@ -228,7 +218,7 @@ struct CalcHeuristics : public FunctionPass {
       return 0;
     }
 
-    if(!PDT->dominates(not_taken_successor_bb, branch_bb) && (LI->isLoopHeader(not_taken_successor_bb) /* or loop pre-header */)){
+    if(not_taken_successor_bb != nullptr && !PDT->dominates(not_taken_successor_bb, branch_bb) && (LI->isLoopHeader(not_taken_successor_bb) /* or loop pre-header */)){
       errs() << 1 << "\n";
       return 1;
     }
@@ -246,7 +236,7 @@ struct CalcHeuristics : public FunctionPass {
       }
     }
 
-    if(!PDT->dominates(not_taken_successor_bb, branch_bb)){
+    if(not_taken_successor_bb != nullptr && !PDT->dominates(not_taken_successor_bb, branch_bb)){
       for(Instruction &i : *not_taken_successor_bb) {
         int opc = i.getOpcode();
         if(isa<CallInst>(&i)){
@@ -254,7 +244,6 @@ struct CalcHeuristics : public FunctionPass {
         }
       }
     }
-
     return -1;
   }
 
@@ -270,7 +259,7 @@ struct CalcHeuristics : public FunctionPass {
       }
     }
 
-    if(!PDT->dominates(not_taken_successor_bb, branch_bb)){
+    if(not_taken_successor_bb != nullptr && !PDT->dominates(not_taken_successor_bb, branch_bb)){
       for(Instruction &i : *not_taken_successor_bb) {
         int opc = i.getOpcode();
         if(opc == llvm::Instruction::Store){
@@ -278,7 +267,6 @@ struct CalcHeuristics : public FunctionPass {
         }
       }
     }
-
     return -1;
   }
 
@@ -291,11 +279,13 @@ struct CalcHeuristics : public FunctionPass {
         }
     }
 
-    for(Instruction &i : *not_taken_successor_bb) {
+    if(not_taken_successor_bb != nullptr){
+      for(Instruction &i : *not_taken_successor_bb) {
         int opc = i.getOpcode();
         if(opc == llvm::Instruction::Ret){
-            return 0;
+          return 0;
         }
+      }
     }
 
     return -1;
