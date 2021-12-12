@@ -182,6 +182,20 @@ struct CalcHeuristics : public FunctionPass {
     return -1;
   }
 
+  Value* check_load(Instruction *inst){
+    if(inst->getOpcode() == llvm::Instruction::Load){
+      return inst->getOperand(0);
+    }
+    return nullptr;
+  }
+
+  Value* check_store(Instruction *inst){
+    if(inst->getOpcode() == llvm::Instruction::Store){
+      return inst->getOperand(1);
+    }
+    return nullptr;
+  }
+
   // Guard: If operand is a register that is used before define in the successor, and the successor does not post-dominate the current block, predict branch taken to the successor
   int h_guard(BasicBlock *branch_bb, BasicBlock *taken_successor_bb, BasicBlock *not_taken_successor_bb){
     auto PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
@@ -191,22 +205,83 @@ struct CalcHeuristics : public FunctionPass {
     if(branch_instr->isConditional()){
       Value *cond = branch_instr->getCondition();
       Instruction *i = dyn_cast<Instruction>(&*cond);
-      Value *opr0 = i->getOperand(0);
-      Value *opr1 = i->getOperand(1);
+      Instruction *instopr1 = dyn_cast<Instruction>(i->getOperand(0));
+      Instruction *instopr2 = dyn_cast<Instruction>(i->getOperand(1));
+      Value* opr1 = check_load(instopr1);
+      Value* opr2 = nullptr;
+      if(instopr2 != nullptr){
+        opr2 = check_load(instopr2);
+      }
 
       if(!PDT->dominates(taken_successor_bb, branch_bb)){
+        bool opr1_def_before_use = false;
+        bool opr2_def_before_use = false;
+        // Loop until both operands are defined before used, or one is used before defined. If the latter is the case, predict taken!
         for(Instruction &i : *taken_successor_bb) {
-          return 0;
+          // Only check opr1 if it is not already defined before used
+          if(!opr1_def_before_use){
+            // Check if opr1 is used as an operand
+            if(check_load(&i) == opr1){
+              return 0;
+            }
+            // Check if opr1 is the destination
+            if(check_store(&i) == opr1){
+              opr1_def_before_use = true;
+            }
+          }
+          if(!opr2_def_before_use && opr2 != nullptr){
+            // Check if opr2 is used as an operand
+            if(check_load(&i) == opr2){
+              return 0;
+            }
+            // Check if opr2 is the destination
+            if(check_store(&i) == opr2){
+              opr2_def_before_use = true;
+            }
+          }
+          // If both have been defined before use, we can break
+          if(opr1_def_before_use && opr2_def_before_use){
+            break;
+          }
         }
       }
 
       if(not_taken_successor_bb != nullptr && !PDT->dominates(not_taken_successor_bb, branch_bb)){
+        bool opr1_def_before_use = false;
+        bool opr2_def_before_use = false;
+        // Loop until both operands are defined before used, or one is used before defined. If the latter is the case, predict taken!
         for(Instruction &i : *not_taken_successor_bb) {
-          return 1;
+          // Only check opr1 if it is not already defined before used
+          if(!opr1_def_before_use){
+            // Check if opr1 is used as an operand
+            if(check_load(&i) == opr1){
+              return 1;
+            }
+            // Check if opr1 is the destination
+            if(check_store(&i) == opr1){
+              opr1_def_before_use = true;
+            }
+          }
+          if(!opr2_def_before_use && opr2 != nullptr){
+            // Check if opr1 is used as an operand
+            if(check_load(&i) == opr2){
+              return 1;
+            }
+            // Check if opr2 is the destination
+            if(check_store(&i) == opr2){
+              opr2_def_before_use = true;
+            }
+          }
+          // If both have been defined before use, we can break
+          if(opr1_def_before_use && opr2_def_before_use){
+            break;
+          }
         }
       }
+      return -1;
+    }else{
+      return -1;
     }
-    return -1;
   }
 
   // Loop Header: If successor is a loop header or loop pre-header and does not post dominate, then the branch will be taken
