@@ -95,26 +95,18 @@ struct CalcHeuristics : public FunctionPass {
         BranchProbability taken_br_prob = bpi.getEdgeProbability(curr_bb, taken_idx);
         double taken_prob = (double) taken_br_prob.getNumerator() / taken_br_prob.getDenominator();
         double not_taken_prob = 1 - taken_prob;
-        fprintf(true_prob_data, "%f, %f\n", taken_prob, not_taken_prob);
+        fprintf(true_prob_data, "%f,%f\n", taken_prob, not_taken_prob);
 
         // Heuristics
-        double loop_val = h_loop(curr_bb, taken);
-        double pointer_val = h_pointer(curr_bb);
-        double opcode_val = h_opcode(curr_bb);
-        double guard_val = h_guard(curr_bb, taken, not_taken);
-        double loopheader_val = h_loopheader(curr_bb, taken, not_taken);
-        double call_val = h_call(curr_bb, taken, not_taken);
-        double store_val = h_store(curr_bb, taken, not_taken);
-        double return_val = h_return(taken, not_taken);
-        fprintf(heuristic_data, "%.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f, %.1f\n",
-          loop_val,
-          pointer_val,
-          opcode_val,
-          guard_val,
-          loopheader_val,
-          call_val,
-          store_val,
-          return_val
+        fprintf(heuristic_data, "%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f,%.1f\n",
+          h_loop(curr_bb, taken),
+          h_pointer(curr_bb),
+          h_opcode(curr_bb),
+          h_guard(curr_bb, taken, not_taken),
+          h_loopheader(curr_bb, taken, not_taken),
+          h_call(curr_bb, taken, not_taken),
+          h_store(curr_bb, taken, not_taken),
+          h_return(taken, not_taken)
         );
       }
     }
